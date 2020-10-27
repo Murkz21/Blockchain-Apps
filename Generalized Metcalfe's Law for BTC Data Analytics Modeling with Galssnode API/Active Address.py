@@ -31,7 +31,8 @@ def get_purifed_aa_data(api_url, api_parameters):
     return df
 
 def plot_data():
-
+    
+    print('Please input your Glassnode API kye:')
     aa_data = get_purifed_aa_data(aa_url, parameters)
 
     fig, main_ax = plt.subplots()
