@@ -9,7 +9,7 @@ import json
 aa_url = 'https://api.glassnode.com/v1/metrics/addresses/active_count'
 
 parameters = {
-    'api_key' : 'YOUR GLASSNODE API KEY',
+    'api_key' : input(), #input your Glassnode API key.
     'a' : 'BTC',
     'i' : '24h',
     'c' : 'native',
