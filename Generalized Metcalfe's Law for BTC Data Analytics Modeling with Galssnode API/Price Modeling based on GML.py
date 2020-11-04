@@ -91,11 +91,9 @@ def marketcap_to_activeaddress_log_linear(x):
 def aa_growth_distns_4prams(x):
     a, b, c, d = fit_aa_curve_coe_4prams()
     return (np.exp(a) * np.exp(-b * np.exp(-c * x**d)))
-    # Fit from 2010-7-17 ~ 2018-2-26: [16.311436610125494 9.829820827577437 0.004196496070897182 0.7278411556685518]
 def aa_growth_distns_3prams(x):
     a, b, c = fit_aa_curve_coe_3prams()
     return (np.exp(a) * np.exp(-b * np.exp(-c * x)))
-    # Fit from 2010-7-17 ~ 2018-2-26: [15.324206425553633 7.273872291567914 0.0005511093996648274]
     
 def plot_data():
     aa_data = get_purifed_data(aa_url, parameters)
