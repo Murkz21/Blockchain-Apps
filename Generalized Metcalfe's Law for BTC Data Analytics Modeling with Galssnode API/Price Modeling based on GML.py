@@ -13,7 +13,7 @@ cs_url = 'https://api.glassnode.com/v1/metrics/supply/current'
 pc_url = 'https://api.glassnode.com/v1/metrics/market/price_usd_close'
 
 parameters = {
-    'api_key' : 'd5ff038a-665e-48ab-96c0-a921b456c8aa',
+    'api_key' : '#your API key#', ### API Key required here.
     'a' : 'BTC',
     'i' : '24h',
     'c' : 'native',
@@ -29,7 +29,7 @@ def get_purifed_data(api_url, api_parameters):
     df = df.set_index('t')
     df.index = pd.to_datetime(df.index, unit='s')
     df = df.loc[df.index > '2010-7-16'] # Day 1 of BTC API Data: 2010-7-17
-    df = df.loc[df.index < '2020-11-2']
+    df = df.loc[df.index < '2020-11-4']
     df.reset_index(inplace=True)
     return df
 
@@ -42,21 +42,6 @@ def fit_aa_curve_coe_4prams():
     aa_date_array = aa_data.index
     coe_guess = [1.72, 1.76, 0.79, 0.70]
     est_coe, est_cov = curve_fit(aa_growth_modeling_4prams, 
-                                 aa_date_array, 
-                                 aa_real_nums, 
-                                 coe_guess, 
-                                 maxfev = 1000000)
-    return est_coe
-
-def aa_growth_modeling_3prams(x, a, b, c):
-    return (np.e**(a) * np.e**(-b * np.e**(-c * x)))
-
-def fit_aa_curve_coe_3prams():
-    aa_data = get_purifed_data(aa_url, parameters)
-    aa_real_nums = np.array(aa_data['v'])
-    aa_date_array = aa_data.index
-    coe_guess = [1.72, 1.76, 0.79]
-    est_coe, est_cov = curve_fit(aa_growth_modeling_3prams, 
                                  aa_date_array, 
                                  aa_real_nums, 
                                  coe_guess, 
@@ -79,29 +64,46 @@ def fit_marketcap_to_activeaddress_coe():
                                  maxfev = 1000000)
     return est_coe
 
-# Generalized Metcalfe Regression or Generalized Metcalfe's Law
-def marketcap_to_activeaddress_log_linear(x):
-    return (np.exp(-2.48976225) * pow(x, 2.06180649))
-    # Fit from 2010-7-17 ~ 2020-11-2: [-2.48976225 2.06180649]
-    
-# Active Addresses Growth Curve Fit
+def coins_in_circulation_modeling(x, a, b, c, d):
+    return (a + b * x + c * x**2 + d * x**3)
+
+def fit_coins_in_circulation_coe():
+    cs_data = get_purifed_data(cs_url, parameters)
+    cs_real_nums = np.array(cs_data['v'])
+    cs_date_array = cs_data.index
+    coe_guess = [3000000, 300000, 100000, 100000]
+    est_coe, est_cov = curve_fit(coins_in_circulation_modeling, 
+                                 cs_date_array, 
+                                 cs_real_nums, 
+                                 coe_guess, 
+                                 maxfev = 1000000)
+    return est_coe
+
 # Regarding the coefficients, please see to the papper:
 # Combining a Generalized Metcalfe's Law and the LPPLS Model
 # Prof. Didier Sornette and his team
+
+# Generalized Metcalfe Regression / Generalized Metcalfe's Law
+def marketcap_to_activeaddress_log_linear(x):
+    return (np.exp(1.51) * pow(x, 1.69))
+    
+# Active Addresses Growth Curve / Equation
 def aa_growth_distns_4prams(x):
     a, b, c, d = fit_aa_curve_coe_4prams()
     return (np.exp(a) * np.exp(-b * np.exp(-c * x**d)))
-def aa_growth_distns_3prams(x):
-    a, b, c = fit_aa_curve_coe_3prams()
-    return (np.exp(a) * np.exp(-b * np.exp(-c * x)))
-    
+
+# Coins in Circulation curve / Equation
+def coins_in_circulation_distns(x):
+    a, b, c, d = fit_coins_in_circulation_coe()
+    return (a + b * x + c * x**2 + d * x**3)
+
 def plot_data():
     aa_data = get_purifed_data(aa_url, parameters)
     mc_data = get_purifed_data(mc_url, parameters)
     cs_data = get_purifed_data(cs_url, parameters)
     pc_data = get_purifed_data(pc_url, parameters)
     fig, main_ax = plt.subplots(2, 2, figsize=(20, 15))
-    # up-left plot
+    # up-left plot:
     main_ax[0, 0].title.set_text('Active Addresses')
     main_ax[0, 0].plot(aa_data['t'], aa_data['v'], 
                        linewidth=0.2)
@@ -115,7 +117,7 @@ def plot_data():
     main_ax[0, 0].set_yscale('log')
     main_ax[0, 0].set_ylim(pow(10, 3), 3*pow(10, 6))
     main_ax[0, 0].grid(True)
-    # down-left plot
+    # down-left plot:
     main_ax[1, 0].title.set_text('Market Cap')
     main_ax[1, 0].plot(mc_data['t'], mc_data['v'], 
                        linewidth=0.5)
@@ -128,7 +130,7 @@ def plot_data():
     main_ax[1, 0].set_yscale('log') #basey = np.e
     main_ax[1, 0].set_ylim(pow(10, 4), pow(10, 13))
     main_ax[1, 0].grid(True)
-    # up-right plot    
+    # up-right plot:
     main_ax[0, 1].title.set_text('Market Cap to Active Addresses')
     main_ax[0, 1].scatter(aa_data['v'], mc_data['v'], 
                           s=3, 
@@ -145,13 +147,12 @@ def plot_data():
     main_ax[0, 1].set_xlim(100, )
     main_ax[0, 1].set_ylim(pow(10, 5), )
     main_ax[0, 1].grid(True)
-    # down-right plot
+    # down-right plot:
     main_ax[1, 1].title.set_text('BTC Price vs Estimated Price')
     main_ax[1, 1].plot(pc_data['t'], pc_data['v'], 
                        linewidth=0.5, 
                        label='BTC Price')
-    y4 = y3/cs_data['v']
-    print(y4[-10:])
+    y4 = y2/coins_in_circulation_distns(cs_data.index)
     main_ax[1, 1].plot(pc_data['t'], y4, 
                        color=(0.7, 0.2, 0.1), 
                        linewidth=0.5, 
