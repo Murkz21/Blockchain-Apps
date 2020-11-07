@@ -165,5 +165,5 @@ def plot_data():
     main_ax[1, 1].grid(True)
     plt.show()
 
-if '__name__' == '__main__':
+if __name__ == '__main__':
   plot_data()
