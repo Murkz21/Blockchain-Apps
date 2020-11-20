@@ -7,13 +7,16 @@ import numpy as np
 import datetime
 import json
 
+
+#################################### ETL ####################################
+
 aa_url = 'https://api.glassnode.com/v1/metrics/addresses/active_count'
 mc_url = 'https://api.glassnode.com/v1/metrics/market/marketcap_usd'
 cs_url = 'https://api.glassnode.com/v1/metrics/supply/current'
 pc_url = 'https://api.glassnode.com/v1/metrics/market/price_usd_close'
 
 parameters = {
-    'api_key' : '#your API key#', ### API Key required here.
+    'api_key' : '#your API key#', ### API Key required here, you may need to apply to Glassnode.com.
     'a' : 'BTC',
     'i' : '24h',
     'c' : 'native',
@@ -33,10 +36,15 @@ def get_purifed_data(api_url, api_parameters):
     df.reset_index(inplace=True)
     return df
 
+
+############################## Data Modeling ##############################
+
 def aa_growth_modeling_4prams(x, a, b, c, d):
+# Function for Active Address Estimation Curve Fitting
     return (np.e**(a) * np.e**(-b * np.e**(-c * x**d)))
 
 def fit_aa_curve_coe_4prams():
+# Active Address Estimation Curve Fitting and Coefficient Calculation
     aa_data = get_purifed_data(aa_url, parameters)
     aa_real_nums = np.array(aa_data['v'])
     aa_date_array = aa_data.index
@@ -48,26 +56,20 @@ def fit_aa_curve_coe_4prams():
                                  maxfev = 1000000)
     return est_coe
 
-def marketcap_to_activeaddress_modeling(x, a, b):
-    return (np.e**(a) * x**(b))
-
-def fit_marketcap_to_activeaddress_coe():
+def linear_fit_marketcap_to_activeaddress_coe():
+# Market Cap to Active Address Line Fitting (log linear)
     aa_data = get_purifed_data(aa_url, parameters)
     mc_data = get_purifed_data(mc_url, parameters)
-    aa_real_nums = np.array(aa_data['v'])
-    mc_real_nums = np.array(mc_data['v'])
-    coe_guess = [1.51, 1.69]
-    est_coe, est_cov = curve_fit(marketcap_to_activeaddress_modeling, 
-                                 aa_real_nums, 
-                                 mc_real_nums, 
-                                 coe_guess, 
-                                 maxfev = 1000000)
-    return est_coe
+    aa_log = np.log(np.array(aa_data['v']))
+    mc_log = np.log(np.array(mc_data['v']))
+    return np.polyfit(aa_log, mc_log, 1)
 
 def coins_in_circulation_modeling(x, a, b, c, d):
+# Function for Coin in Circulation Estimation Curve Fitting
     return (a + b * x + c * x**2 + d * x**3)
 
 def fit_coins_in_circulation_coe():
+# Coin in Circulation Estimation Curve Fitting and Coefficient Calculation
     cs_data = get_purifed_data(cs_url, parameters)
     cs_real_nums = np.array(cs_data['v'])
     cs_date_array = cs_data.index
@@ -79,24 +81,30 @@ def fit_coins_in_circulation_coe():
                                  maxfev = 1000000)
     return est_coe
 
-# Regarding the coefficients, please see to the papper:
+# Regarding the data modeling, please see to the papper:
 # Combining a Generalized Metcalfe's Law and the LPPLS Model
 # Prof. Didier Sornette and his team
 
+
+############################# Data Processing #############################
+
 def marketcap_to_activeaddress_log_linear(x):
 # Generalized Metcalfe Regression / Generalized Metcalfe's Law
+    a, b = linear_fit_marketcap_to_activeaddress_coe()
     return (np.exp(1.51) * pow(x, 1.69))
     
 def aa_growth_distns_4prams(x):
-    # Active Addresses Growth Curve / Equation
+# Active Addresses Growth Curve / Equation
     a, b, c, d = fit_aa_curve_coe_4prams()
     return (np.exp(a) * np.exp(-b * np.exp(-c * x**d)))
 
 def coins_in_circulation_distns(x):
-    # Coins in Circulation curve / Equation
+# Coins in Circulation curve / Equation
     a, b, c, d = fit_coins_in_circulation_coe()
     return (a + b * x + c * x**2 + d * x**3)
 
+
+############################ Data Visualization ###########################
 def plot_data():
     aa_data = get_purifed_data(aa_url, parameters)
     mc_data = get_purifed_data(mc_url, parameters)
@@ -166,12 +174,12 @@ def plot_data():
     plt.show()
     
 def x_days_prediction(x_days):
-    # X_days++ price prediction based on the estimation curve
+# X_days++ Price Prediction based on the Estimation Curve
     aa_data = get_purifed_data(aa_url, parameters)
     x = pd.DataFrame(aa_data.index.tolist())
     x = np.append(x, (x[-x_days:] + x_days))
-    puls_x_days_estimation = marketcap_to_activeaddress_log_linear(aa_growth_distns_4prams(x))/coins_in_circulation_distns(x)
-    predicted_price = puls_x_days_estimation[-x_days:]
+    plus_x_days_estimation = marketcap_to_activeaddress_log_linear(aa_growth_distns_4prams(x))/coins_in_circulation_distns(x)
+    predicted_price = plus_x_days_estimation[-x_days:]
     return predicted_price
 
 if __name__ == '__main__':
