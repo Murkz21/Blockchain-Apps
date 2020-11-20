@@ -83,17 +83,17 @@ def fit_coins_in_circulation_coe():
 # Combining a Generalized Metcalfe's Law and the LPPLS Model
 # Prof. Didier Sornette and his team
 
-# Generalized Metcalfe Regression / Generalized Metcalfe's Law
 def marketcap_to_activeaddress_log_linear(x):
+# Generalized Metcalfe Regression / Generalized Metcalfe's Law
     return (np.exp(1.51) * pow(x, 1.69))
     
-# Active Addresses Growth Curve / Equation
 def aa_growth_distns_4prams(x):
+    # Active Addresses Growth Curve / Equation
     a, b, c, d = fit_aa_curve_coe_4prams()
     return (np.exp(a) * np.exp(-b * np.exp(-c * x**d)))
 
-# Coins in Circulation curve / Equation
 def coins_in_circulation_distns(x):
+    # Coins in Circulation curve / Equation
     a, b, c, d = fit_coins_in_circulation_coe()
     return (a + b * x + c * x**2 + d * x**3)
 
@@ -164,6 +164,16 @@ def plot_data():
     main_ax[1, 1].set_ylim(1, 30000)
     main_ax[1, 1].grid(True)
     plt.show()
+    
+def x_days_prediction(x_days):
+    # X_days++ price prediction based on the estimation curve
+    aa_data = get_purifed_data(aa_url, parameters)
+    x = pd.DataFrame(aa_data.index.tolist())
+    x = np.append(x, (x[-x_days:] + x_days))
+    puls_x_days_estimation = marketcap_to_activeaddress_log_linear(aa_growth_distns_4prams(x))/coins_in_circulation_distns(x)
+    predicted_price = puls_x_days_estimation[-x_days:]
+    return predicted_price
 
 if __name__ == '__main__':
-  plot_data()
+    plot_data()
+    x_days_prediction(60)
